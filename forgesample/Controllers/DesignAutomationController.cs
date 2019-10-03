@@ -351,13 +351,11 @@ namespace forgeSample.Controllers
         public async Task<IActionResult> UpdateModel([FromBody]JObject workItemsSpecs)
         {
             // basic input validation
-            string widthParam = workItemsSpecs["width"].Value<string>();
-            string heigthParam = workItemsSpecs["height"].Value<string>();
-            string activityName = string.Format("{0}.{1}", NickName, "UpdateModel");
+            string inputFile = workItemsSpecs["file"].Value<string>();
             string browerConnectionId = workItemsSpecs["browerConnectionId"].Value<string>();
 
-            string inputFileNameOSS = "";
-            string outputFileNameOSS = "";
+            string inputFileNameOSS = inputFile;
+            string outputFileNameOSS = "result.zip";
 
             // OAuth token
             dynamic oauth = await OAuthController.GetInternalAsync();
@@ -377,9 +375,13 @@ namespace forgeSample.Controllers
                  }
             };
             // 2. input json
-            dynamic inputJson = new JObject();
-            inputJson.Width = widthParam;
-            inputJson.Height = heigthParam;
+            dynamic inputJson = workItemsSpecs["parameters"];
+
+            // !AA! For debugging Activity
+            System.IO.File.WriteAllText(@"c:\Dev/parameters.json", inputJson.ToString());
+
+            //dynamic inputJson = JObject.Parse(params);
+
             XrefTreeArgument inputJsonArgument = new XrefTreeArgument()
             {
                 Url = "data:application/json, " + ((JObject)inputJson).ToString(Formatting.None).Replace("\"", "'")
@@ -394,6 +396,9 @@ namespace forgeSample.Controllers
                        {"Authorization", "Bearer " + oauth.access_token }
                    }
             };
+
+            // !AA! This is down, build it from user id
+            string activityName = "";
 
             // prepare & submit workitem
             string callbackUrl = string.Format("{0}/api/forge/callback/designautomation?id={1}&outputFileName={2}", OAuthController.GetAppSetting("FORGE_WEBHOOK_URL"), browerConnectionId, outputFileNameOSS);

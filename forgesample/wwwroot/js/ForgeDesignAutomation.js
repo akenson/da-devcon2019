@@ -22,20 +22,20 @@ $(document).ready(function () {
     $('#clearAccount').click(clearAccount);
     $('#defineActivityShow').click(defineActivityModal);
     $('#createAppBundleActivity').click(createAppBundleActivity);
-  $('#startExtractParams').click(startExtractParams);
-  $('#startUpdateModel').click(startUpdateModel);
+    $('#startExtractParams').click(startExtractParams);
+    $('#startUpdateModel').click(startUpdateModel);
 
     startConnection();
 
     // !AA! For testing local viewer, having trouble with this in IIS
-    launchViewer("viewables/viewable/bubble.json");
+    //launchViewer("viewables/viewable/bubble.json");
 });
 
 function prepareLists() {
     //list('activity', '/api/forge/designautomation/activities');
     //list('engines', '/api/forge/designautomation/engines');
     //list('localBundles', '/api/appbundles');
-  list('inputFile', '/api/forge/datamanagement/objects');
+    list('inputFile', '/api/forge/datamanagement/objects');
 }
 
 function list(control, endpoint) {
@@ -115,19 +115,19 @@ function createActivity(cb) {
 }
 
 function startExtractParams() {
-    
+
     startConnection(function () {
-      var data = JSON.stringify({
-        documentPath: $('#documentPath').val(),
-        projectPath: $('#projectPath').val(),
-        inputFile: $('#inputFile').val(),
+        var data = JSON.stringify({
+            documentPath: $('#documentPath').val(),
+            projectPath: $('#projectPath').val(),
+            inputFile: $('#inputFile').val(),
             browerConnectionId: connectionId
         });
         writeLog('Getting document parameters ...');
         $.ajax({
             url: 'api/forge/designautomation/workitems/extractparams',
-          data: data,
-          contentType: 'application/json',
+            data: data,
+            contentType: 'application/json',
             //processData: false,
             //contentType: false,
             method: 'POST',
@@ -139,63 +139,69 @@ function startExtractParams() {
 }
 
 function startUpdateModel() {
-  var inputFileField = document.getElementById('inputFile');
-  if (inputFileField.files.length === 0) { alert('Please select an input file'); return; }
-  if ($('#activity').val() === null) { alert('Please select an activity'); return };
-  var file = inputFileField.files[0];
-  startConnection(function () {
-    var formData = new FormData();
-    formData.append('inputFile', file);
-    formData.append('data', JSON.stringify({
-      width: $('#width').val(),
-      height: $('#height').val(),
-      activityName: $('#activity').val(),
-      browerConnectionId: connectionId
-    }));
-    writeLog('Uploading input file...');
-    $.ajax({
-      url: 'api/forge/designautomation/workitems',
-      data: formData,
-      processData: false,
-      contentType: false,
-      type: 'POST',
-      success: function (res) {
-        writeLog('Workitem started: ' + res.workItemId);
-      }
+
+    startConnection(function () {
+        var file = $('#inputFile').val();
+        var updateData = {
+            'file': file,
+            browerConnectionId: connectionId,
+            parameters: {}
+        };
+
+        var children = document.getElementById("parameters").childNodes;
+        for (var i = 0; i < children.length; i++) {
+            var item = children[i].children[1];
+            var id = item.id.split('parameters_').pop();
+            var value = item.value;
+            updateData.parameters[id] = value;
+            console.log("id: " + id + ", value: " + value);
+        }
+
+        var updateDataStr = JSON.stringify(updateData);
+
+        writeLog('Updating model with new params...');
+        $.ajax({
+            url: 'api/forge/designautomation/workitems/updatemodel',
+            data: updateDataStr,
+            contentType: 'application/json',
+            method: 'POST',
+            success: function (res) {
+                writeLog('Workitem started: ' + res.workItemId);
+            }
+        });
     });
-  });
 }
 
 function writeLog(text) {
-  $('#outputlog').append('<div style="border-top: 1px dashed #C0C0C0">' + text + '</div>');
-  var elem = document.getElementById('outputlog');
-  elem.scrollTop = elem.scrollHeight;
+    $('#outputlog').append('<div style="border-top: 1px dashed #C0C0C0">' + text + '</div>');
+    var elem = document.getElementById('outputlog');
+    elem.scrollTop = elem.scrollHeight;
 }
 
 function updateParameters(message) {
-  var parameters = $('#parameters');
-  parameters.html('');
+    var parameters = $('#parameters');
+    parameters.html('');
 
-  let json = JSON.parse(message);
-  for (let key in json) {
-    let item = json[key];
-    let id = `parameters_${key}`;
+    let json = JSON.parse(message);
+    for (let key in json) {
+        let item = json[key];
+        let id = `parameters_${key}`;
 
-    if (item.values && item.values.length > 0) {
-      parameters.append($(`
+        if (item.values && item.values.length > 0) {
+            parameters.append($(`
         <div class="form-group">
           <label for="${id}">${key}</label>
           <select class="form-control" id="${id}"></select>
         </div>`));
-      let select = $(`#${id}`);
-      for (let key2 in item.values) {
-        let value = item.values[key2];
-        select.append($('<option>', { value: value, text: value }))
-      }
-      // Activate current selection
-      select.val(item.value);
-    } else if (item.unit === "Boolean") {
-      parameters.append($(`
+            let select = $(`#${id}`);
+            for (let key2 in item.values) {
+                let value = item.values[key2];
+                select.append($('<option>', { value: value, text: value }))
+            }
+            // Activate current selection
+            select.val(item.value);
+        } else if (item.unit === "Boolean") {
+            parameters.append($(`
         <div class="form-group">
           <label for="${id}">${key}</label>
           <select class="form-control" id="${id}">
@@ -203,18 +209,18 @@ function updateParameters(message) {
             <option value="False">False</option>
           </select>
         </div>`));
-      let select = $(`#${id}`);
-      select.val(item.value);
-    } else {
-      parameters.append($(`
+            let select = $(`#${id}`);
+            select.val(item.value);
+        } else {
+            parameters.append($(`
         <div class="form-group">
           <label for="${id}">${key}</label>
           <input type="text" class="form-control" id="${id}" placeholder="Enter new ${key} value">
         </div>`));
-      let input = $(`#${id}`);
-      input.val(item.value);
+            let input = $(`#${id}`);
+            input.val(item.value);
+        }
     }
-  }
 }
 
 function updateViewable(message) {
@@ -237,7 +243,7 @@ function startConnection(onReady) {
         });
 
     connection.on("downloadResult", function (url) {
-        writeLog('<a href="' + url +'">Download result file here</a>');
+        writeLog('<a href="' + url + '">Download result file here</a>');
     });
 
     connection.on("onComplete", function (message) {
@@ -245,12 +251,13 @@ function startConnection(onReady) {
     });
 
     connection.on("onParameters", function (message) {
-      updateParameters(message);
+        updateParameters(message);
     });
 
     connection.on("onViewableUpdate", function (message) {
+        // !AA! Fix this once I figure out how to load local SVF with IIS
         //updateViewable(message);
-        launchViewer("viewables/viewable/bubble.json");
+        //launchViewer("viewables/viewable/bubble.json");
     });
 }
 
