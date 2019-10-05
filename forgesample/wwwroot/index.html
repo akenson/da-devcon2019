@@ -11,12 +11,64 @@
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/css/bootstrap.min.css">
 
     <!-- Autodesk Forge Viewer files -->
-    <link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/6.*/style.min.css" type="text/css">
-    <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/6.*/viewer3D.min.js"></script>
+    <link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/style.min.css" type="text/css">
+    <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.min.js"></script>
     <!-- .NET SignalR -->
     <script src="//unpkg.com/@aspnet/signalr@1.1.0/dist/browser/signalr.min.js"></script>
     <!-- Files for this project -->
     <script src="/js/ForgeDesignAutomation.js"></script>
+
+    <style>
+        /** Just simple CSS styling to make this page a little nicer **/
+
+        main {
+            padding: 2em;
+        }
+
+            main button {
+                background-color: #3252aa;
+                color: #fff;
+                text-decoration: none;
+                padding: 1em;
+                border-radius: 2px;
+                transition: background-color 0.2s ease;
+            }
+
+                main button:hover {
+                    background-color: #ff5800;
+                }
+
+        .column {
+            float: left;
+            width: 15%;
+            padding: 10px;
+        }
+
+        /* Clear floats after the columns */
+        .row:after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+
+        .viewer {
+            background-color: white;
+            height: 800px;
+            width: 1000px;
+            position: relative;
+        }
+
+        hr {
+            width: 100%;
+            height: 4px;
+            margin-left: auto;
+            margin-right: auto;
+            background-color: #666;
+            border: 0 none;
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+    </style>
 </head>
 
 <body style="height: 100%;">
@@ -27,77 +79,171 @@
                 <li>
                     <a href="http://developer.autodesk.com" target="_blank">
                         <img alt="Autodesk Forge" src="//developer.static.autodesk.com/images/logo_forge-2-line.png"
-                            height="20">
+                             height="20">
                     </a>
                 </li>
             </ul>
             <div style="float: right; margin-top: 15px; cursor: pointer;">
-                <span style="padding-right: 5px;" data-toggle="modal" data-target="#defineActivityModal" title="Configura AppBundle & Activity"><span
-                        class="glyphicon glyphicon-cog glyphiconTop mlink"> </span> Configure</span>
+                <span style="padding-right: 5px;" data-toggle="modal" data-target="#defineActivityModal" title="Configura AppBundle & Activity">
+                    <span class="glyphicon glyphicon-cog glyphiconTop mlink"> </span> Configure
+                </span>
             </div>
         </div>
     </nav>
     <!-- End of navbar -->
     <div class="container-fluid" style="margin-top: 70px;">
         <div class="row">
-            <div class="col-sm-4">
+            <div class="column">
                 <div class="form-group">
                     <label for="inputFile">Input file</label>
                     <select class="form-control" id="inputFile"> </select>
                 </div>
                 <div class="form-group">
                     <label for="documentPath">Document path</label>
-                    <input type="text" class="form-control" id="documentPath" placeholder="Enter document's path in zip" value="inputFile/Process Equipment/Workspace/Skid Packaging Layout.iam">
+                    <input type="text" class="form-control" id="documentPath" placeholder="Enter document's path in zip" value="inputFile/Workspace/Skid Packaging Layout.iam">
                 </div>
                 <div class="form-group">
                     <label for="projectPath">Project path</label>
-                    <input type="text" class="form-control" id="projectPath" placeholder="Enter project's path in zip" value="inputFile/Process Equipment/Skid Equipment.ipj">
+                    <input type="text" class="form-control" id="projectPath" placeholder="Enter project's path in zip" value="inputFile/Skid Equipment.ipj">
                 </div>
                 <center><button class="btn btn-primary" id="startExtractParams">Get parameters</button></center><br />
                 <div id="parameters">
 
                 </div>
-                <center><button class="btn btn-primary" id="startUpdateModel">Update model</button></center><br />
+                <!--<center><button class="btn btn-primary" id="startUpdateModel">Update model</button></center><br />-->
             </div>
-            <div>
-                <div id="MyViewerDiv"></div>
-            </div>
-            <hr />
-            <div class="col-sm-8">
-                <pre id="outputlog" style="height: calc(100vh - 120px);; overflow-y: scroll;"></pre>
-            </div>
+            <div class="viewer column">
+                <div class="row">
+                    <ul class="nav nav-tabs" id="pills-tab" role="tablist">
+                        <li class="nav-item active">
+                            <a class="nav-link active" id="pills-log-tab" data-toggle="tab" href="#pills-log"
+                               role="tab" aria-controls="pills-log" aria-selected="true">Log</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="pills-3d-model-tab" data-toggle="tab" href="#pills-3d-model"
+                               role="tab" aria-controls="pills-activities" aria-selected="false">Model</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="pills-bom-tab" data-toggle="tab" href="#pills-bom"
+                               role="tab" aria-controls="pills-bom" aria-selected="false">BOM</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="pills-drawing-tab" data-toggle="tab" href="#pills-drawing"
+                               role="tab" aria-controls="pills-drawing" aria-selected="false">Drawing</a>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="pills-tablog">
+                        <div class="tab-pane active in" id="pills-log" role="tabpanel" aria-labelledby="pills-log-tab">
+                            <div class="col-sm-8">
+                                <br />
+                                <button class="btn btn-primary" id="clearLog">Clear Log</button></>
+                                <hr />
+                                <pre id="outputlog" style="height: calc(100vh - 120px);; overflow-y: scroll;"></pre>
+                            </div>
+                        </div>
+                        <div class="tab-pane" id="pills-3d-model" role="tabpanel" aria-labelledby="pills-3d-model-tab">
+                            <div>
+                                <div>
+                                    <br />
+                                    <button class="btn btn-primary" id="startUpdateModel">Update model</button></>
+                                    <hr />
+                                </div>
+                                <div id="ModelDiv"></div>
+                            </div>
+                        </div>
+                        <div class="tab-pane" id="pills-bom" role="tabpanel" aria-labelledby="pills-bom-tab">
+                            <div>
+                                <div>
+                                    <br />
+                                    <button class="btn btn-primary" id="startUpdateBOM">Update BOM</button></>
+                                    <hr />
+                                </div>
+                                <div>
+                                    <table class="table" id="bomTable">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">#</th>
+                                                <th scope="col">Part Number</th>
+                                                <th scope="col">Quantity</th>
+                                                <th scope="col">Description</th>
+                                                <th scope="col">Material</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="bomTableBody">
+                                            <tr>
+                                                <th scope="row">1</th>
+                                                <td>Test Part Number</td>
+                                                <td>1</td>
+                                                <td>Just a placeholder Description</td>
+                                                <td>Lead</td>
+                                            </tr>
+                                        <th scope="row">2</th>
+                                        <td>Test Part Number 2</td>
+                                        <td>2</td>
+                                        <td>Just a placeholder Description 2</td>
+                                        <td>Copper</td>
+                                        </tr>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane" id="pills-drawing" role="tabpanel" aria-labelledby="pills-drawing-tab">
+                            <div>
+                                <div>
+                                    <br />
+                                    <button class="btn btn-primary" id="startUpdateDrawing">Update drawing</button></>
+                                    <hr />
+                                </div>
+                                <div id="DrawinglDiv">Drawing goes here!</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+                <!--
+                    <div class="col-sm-8">
+                        <pre id="viewer" style="height: calc(100vh - 600px);;"></pre>
+                    </div>
+                    <hr />
+                    <div class="col-sm-8">
+                        <label>Log:</label>
+                        <pre id="outputlog" style="height: calc(100vh - 1200px);; overflow-y: scroll;"></pre>
+                    </div>
+                -->
 
+            </div>
         </div>
-    </div>
-    <!-- Modal Define AppBundle & Activity -->
-    <div class="modal fade" id="defineActivityModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Cancel"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title" id="myModalLabel">Create/Update AppBundle & Activity</h4>
-                </div>
-                <div class="modal-body">
-                  <div class="alert alert-warning"><center>You just need to define AppBundle &amp; Activity once.<br />If the plugin code changed, redefine (creates a new version).</center></div>
-                    <div class="form-group">
-                        <label for="localBundles">Select a local AppBundle:</label>
-                        <select class="form-control" id="localBundles"> </select>
-                        <b>Tip:</b> Make sure .ZIP bundles are placed at <b>/bundles/</b> folder
+        <!-- Modal Define AppBundle & Activity -->
+        <div class="modal fade" id="defineActivityModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Cancel"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" id="myModalLabel">Create/Update AppBundle & Activity</h4>
                     </div>
-                    <div class="form-group">
-                        <label for="engines">Select engine:</label>
-                        <select class="form-control" id="engines"> </select>
+                    <div class="modal-body">
+                        <div class="alert alert-warning"><center>You just need to define AppBundle &amp; Activity once.<br />If the plugin code changed, redefine (creates a new version).</center></div>
+                        <div class="form-group">
+                            <label for="localBundles">Select a local AppBundle:</label>
+                            <select class="form-control" id="localBundles"> </select>
+                            <b>Tip:</b> Make sure .ZIP bundles are placed at <b>/bundles/</b> folder
+                        </div>
+                        <div class="form-group">
+                            <label for="engines">Select engine:</label>
+                            <select class="form-control" id="engines"> </select>
+                        </div>
+                        For this sample the .ZIP name is used as suffix to define <b>AppBundle</b> and <b>Activity</b>
+                        names. Activities will have file and params input, and file output.
                     </div>
-                    For this sample the .ZIP name is used as suffix to define <b>AppBundle</b> and <b>Activity</b>
-                    names. Activities will have file and params input, and file output.
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-danger" id="clearAccount">Clear account</button>
-                    <button type="button" class="btn btn-primary" id="createAppBundleActivity">Create/Update</button>
+                    <div class="modal-footer">
+                        <button class="btn btn-danger" id="clearAccount">Clear account</button>
+                        <button type="button" class="btn btn-primary" id="createAppBundleActivity">Create/Update</button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 </body>
 
 </html>

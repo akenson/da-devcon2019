@@ -24,11 +24,20 @@ $(document).ready(function () {
     $('#createAppBundleActivity').click(createAppBundleActivity);
     $('#startExtractParams').click(startExtractParams);
     $('#startUpdateModel').click(startUpdateModel);
+    $('#startUpdateBOM').click(startUpdateBOM);
+    $('#startUpdateDrawing').click(startUpdateDrawing);
+    $('#clearLog').click(clearLog);
+
+    $('#pills-tab a').on('click', function (e) {
+        e.preventDefault()
+        $(this).tab('show')
+    })
 
     startConnection();
 
-    // !AA! For testing local viewer, having trouble with this in IIS
-    //launchViewer("viewables/viewable/bubble.json");
+    // Uncomment to debug viewable
+    //updateViewable('');
+
 });
 
 function prepareLists() {
@@ -36,6 +45,10 @@ function prepareLists() {
     //list('engines', '/api/forge/designautomation/engines');
     //list('localBundles', '/api/appbundles');
     list('inputFile', '/api/forge/datamanagement/objects');
+}
+
+function clearLog() {
+    $('#outputlog').html('');
 }
 
 function list(control, endpoint) {
@@ -139,17 +152,22 @@ function startExtractParams() {
 }
 
 function startUpdateModel() {
+    clearLog();
 
     startConnection(function () {
         var file = $('#inputFile').val();
+        var projectPath = $('#projectPath').val();
+        var documentPath = $('#documentPath').val();
         var updateData = {
             'file': file,
+            'projectPath': projectPath,
+            'documentPath': documentPath,
             browerConnectionId: connectionId,
             parameters: {}
         };
 
         var children = document.getElementById("parameters").childNodes;
-        for (var i = 0; i < children.length; i++) {
+        for (var i = 1 /* first is a label */; i < children.length; i++) {
             var item = children[i].children[1];
             var id = item.id.split('parameters_').pop();
             var value = item.value;
@@ -172,6 +190,65 @@ function startUpdateModel() {
     });
 }
 
+function startUpdateBOM() {
+    clearLog();
+    $('#bomTableBody').html('');
+
+    startConnection(function () {
+        var file = $('#inputFile').val(); 
+        var projectPath = $('#projectPath').val();
+        var documentPath = $('#documentPath').val();
+        var updateData = {
+            'file': file,
+            'projectPath': projectPath,
+            'documentPath': documentPath,
+            browerConnectionId: connectionId
+        };
+
+        var updateDataStr = JSON.stringify(updateData);
+
+        writeLog('Updating model with new params...');
+        $.ajax({
+            url: 'api/forge/designautomation/workitems/updatebom',
+            data: updateDataStr,
+            contentType: 'application/json',
+            method: 'POST',
+            success: function (res) {
+                writeLog('Workitem started: ' + res.workItemId);
+            }
+        });
+    });
+}
+
+function startUpdateDrawing() {
+    clearLog();
+
+    startConnection(function () {
+        var file = $('#inputFile').val();
+        var projectPath = $('#projectPath').val();
+        var documentPath = $('#documentPath').val();
+        var updateData = {
+            'file': file,
+            'projectPath': projectPath,
+            'documentPath': documentPath,
+            browerConnectionId: connectionId
+        };
+
+        var updateDataStr = JSON.stringify(updateData);
+
+        writeLog('Updating model with new params...');
+        $.ajax({
+            url: 'api/forge/designautomation/workitems/updatedrawing',
+            data: updateDataStr,
+            contentType: 'application/json',
+            method: 'POST',
+            success: function (res) {
+                writeLog('Workitem started: ' + res.workItemId);
+            }
+        });
+    });
+}
+
 function writeLog(text) {
     $('#outputlog').append('<div style="border-top: 1px dashed #C0C0C0">' + text + '</div>');
     var elem = document.getElementById('outputlog');
@@ -180,7 +257,7 @@ function writeLog(text) {
 
 function updateParameters(message) {
     var parameters = $('#parameters');
-    parameters.html('');
+    //parameters.html('');
 
     let json = JSON.parse(message);
     for (let key in json) {
@@ -223,10 +300,6 @@ function updateParameters(message) {
     }
 }
 
-function updateViewable(message) {
-
-}
-
 var connection;
 var connectionId;
 
@@ -255,11 +328,18 @@ function startConnection(onReady) {
     });
 
     connection.on("onViewableUpdate", function (message) {
-        // !AA! Fix this once I figure out how to load local SVF with IIS
-        //updateViewable(message);
-        //launchViewer("viewables/viewable/bubble.json");
+        updateViewable(message);
+    });
+
+    connection.on("onBom", function (message) {
+        updateBom(message);
+    });
+
+    connection.on("onDrawing", function (message) {
+        updateDrawing(message);
     });
 }
+
 
 // Get public access token for read only,
 // using ajax to access route /api/forge/oauth/public in the background
@@ -273,7 +353,47 @@ function getForgeToken(callback) {
     });
 }
 
-var viewerApp;
+function updateViewable(message) {
+    writeLog(message);
+
+    // Show the 3D Model Tab
+    showTab('pills-3d-model');
+    $('#pills-tab a[href="#pills-3d-model-tab"]').tab('show')
+
+    // Launch the viewer with the result viewable
+    launchViewer("viewables/viewable/bubble.json");
+}
+
+function updateBom(message) {
+    //$('#bomTableBody').html('');
+    var tableBody = $('#bomTableBody');
+    let json = JSON.parse(message);
+    for (let key in json) {
+        let rowJson = json[key];
+        console.log("row: " + rowJson);
+        var rowNum = rowJson['row_number'];
+        var partNum = rowJson['part_number'];
+        var quantity = rowJson['quantity'];
+        var descr = rowJson['description'];
+        var material = rowJson['material'];
+
+        tableBody.append($(`<tr>
+        <th scope="row">${rowNum}</th>
+        <td>${partNum}</td>
+        <td>${quantity}</td>
+        <td>${descr}</td>
+        <td>${material}</td>
+        </tr>`));
+    }
+
+    console.log(tableBody);
+}
+
+function updateDrawing(message) {
+    $('#DrawingDiv').append('Drawing Updated!!');
+}
+
+var viewer;
 
 function launchViewer(url) {
     var options = {
@@ -283,25 +403,16 @@ function launchViewer(url) {
     };
 
     Autodesk.Viewing.Initializer(options, () => {
-        viewerApp = new Autodesk.Viewing.ViewingApplication('MyViewerDiv');
-        //viewer = new Autodesk.Viewing.GuiViewer3D(document.getElementById('MyViewerDiv'))
-        viewerApp.registerViewer(viewerApp.k3D, Autodesk.Viewing.Private.GuiViewer3D);
-        viewerApp.loadDocument(url, onDocumentLoadSuccess, onDocumentLoadFailure);
-        //viewer = new Autodesk.Viewing.GuiViewer3D(document.getElementById('forgeViewer'));
-        //viewer.start();
-
+        var htmlDiv = document.getElementById('ModelDiv');
+        viewer = new Autodesk.Viewing.GuiViewer3D(htmlDiv);
+        var startedCode = viewer.start();
+        Autodesk.Viewing.Document.load(url, onDocumentLoadSuccess, onDocumentLoadFailure);
     });
 }
 
-function onDocumentLoadSuccess(doc) {
-    console.log('document load success');
-    var viewables = viewerApp.bubble.search({ 'type': 'geometry' });
-    if (viewables.length === 0) {
-        console.error('Document contains no viewables.');
-        return;
-    }
-    // Choose any of the avialble viewables
-    viewerApp.selectItem(viewables[0].data, onItemLoadSuccess, onItemLoadFail);
+function onDocumentLoadSuccess(viewerDocument) {
+    var defaultModel = viewerDocument.getRoot().getDefaultGeometry();
+    viewer.loadDocumentNode(viewerDocument, defaultModel);
 }
 
 function onDocumentLoadFailure(viewerErrorCode) {
@@ -326,5 +437,9 @@ function onItemLoadSuccess(viewer, item) {
 */
 function onItemLoadFail(viewerErrorCode) {
     console.error('onLoadModelError() - errorCode:' + viewerErrorCode);
-    jQuery('#MyViewerDiv').html('<p>There is an error fetching the translated SVF file. Please try refreshing the page.</p>');
+    jQuery('#ModelDiv').html('<p>There is an error fetching the translated SVF file. Please try refreshing the page.</p>');
 }
+
+function showTab(tab) {
+    $('.nav-tabs a[href="#' + tab + '"]').tab('show');
+};

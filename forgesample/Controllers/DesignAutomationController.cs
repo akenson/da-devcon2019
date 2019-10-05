@@ -351,11 +351,14 @@ namespace forgeSample.Controllers
         public async Task<IActionResult> UpdateModel([FromBody]JObject workItemsSpecs)
         {
             // basic input validation
-            string inputFile = workItemsSpecs["file"].Value<string>();
+            string inputFileValue = workItemsSpecs["file"].Value<string>();
+            string projectPathValue = workItemsSpecs["projectPath"].Value<string>();
+            string documentPathValue = workItemsSpecs["documentPath"].Value<string>();
             string browerConnectionId = workItemsSpecs["browerConnectionId"].Value<string>();
 
-            string inputFileNameOSS = inputFile;
-            string outputFileNameOSS = "result.zip";
+            string inputFileNameOSS = inputFileValue;
+            string outputFileNameOSS = "viewable.zip";
+            string outputAssemblyFileNameOSS = "result.zip";
 
             // OAuth token
             dynamic oauth = await OAuthController.GetInternalAsync();
@@ -374,19 +377,21 @@ namespace forgeSample.Controllers
                      { "Authorization", "Bearer " + oauth.access_token }
                  }
             };
-            // 2. input json
-            dynamic inputJson = workItemsSpecs["parameters"];
+            // 2. input params json 
+            JObject inputParams = JObject.FromObject(new { inputFile = documentPathValue, projectFile = projectPathValue, outputType = "svf" });
 
-            // !AA! For debugging Activity
-            System.IO.File.WriteAllText(@"c:\Dev/parameters.json", inputJson.ToString());
-
-            //dynamic inputJson = JObject.Parse(params);
-
-            XrefTreeArgument inputJsonArgument = new XrefTreeArgument()
+            XrefTreeArgument inputParamsArgument = new XrefTreeArgument()
             {
-                Url = "data:application/json, " + ((JObject)inputJson).ToString(Formatting.None).Replace("\"", "'")
+                Url = "data:application/json, " + ((JObject)inputParams).ToString(Formatting.None).Replace("\"", "'")
             };
-            // 3. output file
+            // 2. document params json
+            dynamic dpocumentParametersJson = workItemsSpecs["parameters"];
+
+            XrefTreeArgument documentParamsArgument = new XrefTreeArgument()
+            {
+                Url = "data:application/json, " + ((JObject)dpocumentParametersJson).ToString(Formatting.None).Replace("\"", "'")
+            };
+            // 3. output svf file
             XrefTreeArgument outputFileArgument = new XrefTreeArgument()
             {
                 Url = string.Format("https://developer.api.autodesk.com/oss/v2/buckets/{0}/objects/{1}", bucketKey, outputFileNameOSS),
@@ -396,20 +401,116 @@ namespace forgeSample.Controllers
                        {"Authorization", "Bearer " + oauth.access_token }
                    }
             };
+            // 3. output assembly file
+            XrefTreeArgument outputAssemblyFileArgument = new XrefTreeArgument()
+            {
+                Url = string.Format("https://developer.api.autodesk.com/oss/v2/buckets/{0}/objects/{1}", bucketKey, outputAssemblyFileNameOSS),
+                Verb = Verb.Put,
+                Headers = new Dictionary<string, string>()
+                   {
+                       {"Authorization", "Bearer " + oauth.access_token }
+                   }
+            };
 
-            // !AA! This is down, build it from user id
-            string activityName = "";
+            string activityName = NickName + ".UpdateUserParameters+alpha";
 
             // prepare & submit workitem
-            string callbackUrl = string.Format("{0}/api/forge/callback/designautomation?id={1}&outputFileName={2}", OAuthController.GetAppSetting("FORGE_WEBHOOK_URL"), browerConnectionId, outputFileNameOSS);
+            string callbackUrl = string.Format("{0}/api/forge/callback/designautomation/updatemodel?id={1}&outputFileName={2}", OAuthController.GetAppSetting("FORGE_WEBHOOK_URL"), browerConnectionId, outputFileNameOSS);
             WorkItem workItemSpec = new WorkItem()
             {
                 ActivityId = activityName,
                 Arguments = new Dictionary<string, IArgument>()
                 {
                     { "inputFile", inputFileArgument },
-                    { "inputJson",  inputJsonArgument },
-                    { "outputFile", outputFileArgument },
+                    { "inputParams",  inputParamsArgument },
+                    { "documentParams",  documentParamsArgument },
+                    { "outputViewable", outputFileArgument },
+                    { "outputAssembly", outputAssemblyFileArgument},
+                    { "onComplete", new XrefTreeArgument { Verb = Verb.Post, Url = callbackUrl } }
+                }
+            };
+            WorkItemStatus workItemStatus = await _designAutomation.CreateWorkItemsAsync(workItemSpec);
+
+            return Ok(new { WorkItemId = workItemStatus.Id });
+        }
+
+        /// <summary>
+        /// Start a new workitem
+        /// </summary>
+        [HttpPost]
+        [Route("api/forge/designautomation/workitems/updatedrawing")]
+        public async Task<IActionResult> UpdateDrawing([FromBody]JObject workItemsSpecs)
+        {
+            // basic input validation
+            string inputFileValue = workItemsSpecs["file"].Value<string>();
+            string projectPathValue = workItemsSpecs["projectPath"].Value<string>();
+            string documentPathValue = workItemsSpecs["documentPath"].Value<string>();
+            string browerConnectionId = workItemsSpecs["browerConnectionId"].Value<string>();
+
+            string inputFileNameOSS = "result.zip";
+            string outputPdfFileNameOSS = "result.pdf";
+            string outputDrawingFileNameOSS = "result.idw";
+
+            // OAuth token
+            dynamic oauth = await OAuthController.GetInternalAsync();
+
+            // upload file to OSS Bucket
+            // 1. ensure bucket existis
+            string bucketKey = NickName.ToLower() + "_designautomation";
+
+            // prepare workitem arguments
+            // 1. input file
+            XrefTreeArgument inputFileArgument = new XrefTreeArgument()
+            {
+                Url = string.Format("https://developer.api.autodesk.com/oss/v2/buckets/{0}/objects/{1}", bucketKey, inputFileNameOSS),
+                Headers = new Dictionary<string, string>()
+                 {
+                     { "Authorization", "Bearer " + oauth.access_token }
+                 }
+            };
+            // 2. input params json 
+            JObject inputParams = JObject.FromObject(new { inputFile = documentPathValue, projectFile = projectPathValue });
+
+            XrefTreeArgument inputParamsArgument = new XrefTreeArgument()
+            {
+                Url = "data:application/json, " + ((JObject)inputParams).ToString(Formatting.None).Replace("\"", "'")
+            };
+           
+            // 3. output pdf file
+            XrefTreeArgument outputDrawingFileArgument = new XrefTreeArgument()
+            {
+                Url = string.Format("https://developer.api.autodesk.com/oss/v2/buckets/{0}/objects/{1}", bucketKey, outputDrawingFileNameOSS),
+                Verb = Verb.Put,
+                Headers = new Dictionary<string, string>()
+                   {
+                       {"Authorization", "Bearer " + oauth.access_token }
+                   }
+            };
+
+            // 3. output pdf file
+            XrefTreeArgument outputPdfFileArgument = new XrefTreeArgument()
+            {
+                Url = string.Format("https://developer.api.autodesk.com/oss/v2/buckets/{0}/objects/{1}", bucketKey, outputPdfFileNameOSS),
+                Verb = Verb.Put,
+                Headers = new Dictionary<string, string>()
+                   {
+                       {"Authorization", "Bearer " + oauth.access_token }
+                   }
+            };
+
+            string activityName = NickName + ".CreateDrawing+alpha";
+
+            // prepare & submit workitem
+            string callbackUrl = string.Format("{0}/api/forge/callback/designautomation/updatedrawing?id={1}&outputPdfFileName={2}", OAuthController.GetAppSetting("FORGE_WEBHOOK_URL"), browerConnectionId, outputPdfFileNameOSS);
+            WorkItem workItemSpec = new WorkItem()
+            {
+                ActivityId = activityName,
+                Arguments = new Dictionary<string, IArgument>()
+                {
+                    { "inputFile", inputFileArgument },
+                    { "inputParams",  inputParamsArgument },
+                    { "outputDrawing", outputDrawingFileArgument },
+                    { "outputPdf", outputPdfFileArgument },
                     { "onComplete", new XrefTreeArgument { Verb = Verb.Post, Url = callbackUrl } }
                 }
             };
@@ -428,52 +529,67 @@ namespace forgeSample.Controllers
             try
             {
                 // your webhook should return immediately! we can use Hangfire to schedule a job
-                JObject bodyJson = JObject.Parse((string)body.ToString());
-                await _hubContext.Clients.Client(id).SendAsync("onComplete", bodyJson.ToString());
+                await UpdateViewable(id, outputFileName, body);
+            }
+            catch (Exception e) 
+            {
+                Console.WriteLine("Error: " + e.Message);
+            }
 
-                var client = new RestClient(bodyJson["reportUrl"].Value<string>());
-                var request = new RestRequest(string.Empty);
+            // ALWAYS return ok (200)
+            return Ok();
+        }
 
-                byte[] bs = client.DownloadData(request);
-                string report = System.Text.Encoding.Default.GetString(bs);
-                await _hubContext.Clients.Client(id).SendAsync("onComplete", report);
-
-                // Read parameters from json result file
+        /// <summary>
+        /// Callback from Design Automation Workitem (onProgress or onComplete)
+        /// </summary>
+        [HttpPost]
+        [Route("/api/forge/callback/designautomation/updatebom")]
+        public async Task<IActionResult> OnCallbackUpdateBom(string id, string outputFileName, [FromBody]dynamic body)
+        {
+            try
+            {
                 ObjectsApi objectsApi = new ObjectsApi();
                 dynamic parameters = await objectsApi.GetObjectAsyncWithHttpInfo(NickName.ToLower() + "_designautomation", outputFileName);
                 string data;
                 using (StreamReader reader = new StreamReader(parameters.Data))
                     data = reader.ReadToEnd();
 
-                await _hubContext.Clients.Client(id).SendAsync("onParameters", data);
-
-                // Get LMV viewable and host on web server
-                
-
-                string zipPath = "wwwroot/viewable.zip";
-                using (System.IO.Stream viewable = objectsApi.GetObject(NickName.ToLower() + "_designautomation", "viewable.zip"))
-                using (FileStream zipFile = System.IO.File.Create(zipPath))
-                {
-                    viewable.CopyTo(zipFile);
-                }
-
-                string viewableDir = "wwwroot/viewables/viewable";
-                // Delete the old viewable if it exists (to optimize this cache by configuration)
-                if (Directory.Exists(viewableDir))
-                {
-                    Directory.Delete(viewableDir, true);
-                }
-
-                // Unzip the viewable
-                ZipFile.ExtractToDirectory(zipPath, viewableDir);
-
-                await _hubContext.Clients.Client(id).SendAsync("onViewableUpdate", "");
+                await _hubContext.Clients.Client(id).SendAsync("onBom", data);
 
             }
-            catch (Exception e) 
+            catch (Exception e)
             {
                 Console.WriteLine("Error: " + e.Message);
             }
+
+            // ALWAYS return ok (200)
+            return Ok();
+        }
+
+        /// <summary>
+        /// Callback from Design Automation Workitem (onProgress or onComplete)
+        /// </summary>
+        [HttpPost]
+        [Route("/api/forge/callback/designautomation/updatedrawing")]
+        public async Task<IActionResult> OnCallbackUpdateDrawing(string id, string outputFileName, [FromBody]dynamic body)
+        {
+            // Story PDF Locally
+            //try
+            //{
+            //    ObjectsApi objectsApi = new ObjectsApi();
+            //    dynamic parameters = await objectsApi.GetObjectAsyncWithHttpInfo(NickName.ToLower() + "_designautomation", outputFileName);
+            //    string data;
+            //    using (StreamReader reader = new StreamReader(parameters.Data))
+            //        data = reader.ReadToEnd();
+
+                await _hubContext.Clients.Client(id).SendAsync("onDrawing", null);
+
+            //}
+            //catch (Exception e)
+            //{
+            //    Console.WriteLine("Error: " + e.Message);
+            //}
 
             // ALWAYS return ok (200)
             return Ok();
@@ -489,24 +605,99 @@ namespace forgeSample.Controllers
             try
             {
                 // your webhook should return immediately! we can use Hangfire to schedule a job
-                JObject bodyJson = JObject.Parse((string)body.ToString());
-                await _hubContext.Clients.Client(id).SendAsync("onComplete", bodyJson.ToString());
+                await UpdateViewable(id, outputFileName, body);
+                //JObject bodyJson = JObject.Parse((string)body.ToString());
+                //await _hubContext.Clients.Client(id).SendAsync("onComplete", bodyJson.ToString());
 
-                var client = new RestClient(bodyJson["reportUrl"].Value<string>());
-                var request = new RestRequest(string.Empty);
+                //var client = new RestClient(bodyJson["reportUrl"].Value<string>());
+                //var request = new RestRequest(string.Empty);
 
-                byte[] bs = client.DownloadData(request);
-                string report = System.Text.Encoding.Default.GetString(bs);
-                await _hubContext.Clients.Client(id).SendAsync("onComplete", report);
+                //byte[] bs = client.DownloadData(request);
+                //string report = System.Text.Encoding.Default.GetString(bs);
+                //await _hubContext.Clients.Client(id).SendAsync("onComplete", report);
 
-                ObjectsApi objectsApi = new ObjectsApi();
-                dynamic signedUrl = await objectsApi.CreateSignedResourceAsyncWithHttpInfo(NickName.ToLower() + "_designautomation", outputFileName, new PostBucketsSigned(10), "read");
-                await _hubContext.Clients.Client(id).SendAsync("downloadResult", (string)(signedUrl.Data.signedUrl));
+                //ObjectsApi objectsApi = new ObjectsApi();
+                //dynamic signedUrl = await objectsApi.CreateSignedResourceAsyncWithHttpInfo(NickName.ToLower() + "_designautomation", outputFileName, new PostBucketsSigned(10), "read");
+                //await _hubContext.Clients.Client(id).SendAsync("downloadResult", (string)(signedUrl.Data.signedUrl));
             }
             catch (Exception e) { }
 
             // ALWAYS return ok (200)
             return Ok();
+        }
+
+        /// <summary>
+        /// Start a new workitem
+        /// </summary>
+        [HttpPost]
+        [Route("api/forge/designautomation/workitems/updatebom")]
+        public async Task<IActionResult> UpdateBOM([FromBody]JObject workItemsSpecs)
+        {
+            // basic input validation
+            string inputFileValue = workItemsSpecs["file"].Value<string>();
+            string projectPathValue = workItemsSpecs["projectPath"].Value<string>();
+            string documentPathValue = workItemsSpecs["documentPath"].Value<string>();
+            string browerConnectionId = workItemsSpecs["browerConnectionId"].Value<string>();
+
+            // !AA! check to see if result file is actuall there
+            string inputFileNameOSS = inputFileValue;
+
+            string outputFileNameOSS = "bomRows.json";
+
+            // OAuth token
+            dynamic oauth = await OAuthController.GetInternalAsync();
+
+            // upload file to OSS Bucket
+            // 1. ensure bucket existis
+            string bucketKey = NickName.ToLower() + "_designautomation";
+
+            // prepare workitem arguments
+            // 1. input file
+            XrefTreeArgument inputFileArgument = new XrefTreeArgument()
+            {
+                Url = string.Format("https://developer.api.autodesk.com/oss/v2/buckets/{0}/objects/{1}", bucketKey, inputFileNameOSS),
+                Headers = new Dictionary<string, string>()
+                 {
+                     { "Authorization", "Bearer " + oauth.access_token }
+                 }
+            };
+            // 2. input params json 
+            JObject inputParams = JObject.FromObject(new { inputFile = documentPathValue, projectFile = projectPathValue});
+
+            XrefTreeArgument inputParamsArgument = new XrefTreeArgument()
+            {
+                Url = "data:application/json, " + ((JObject)inputParams).ToString(Formatting.None).Replace("\"", "'")
+            };
+
+            // 3. output file
+            XrefTreeArgument outputFileArgument = new XrefTreeArgument()
+            {
+                Url = string.Format("https://developer.api.autodesk.com/oss/v2/buckets/{0}/objects/{1}", bucketKey, outputFileNameOSS),
+                Verb = Verb.Put,
+                Headers = new Dictionary<string, string>()
+                   {
+                       {"Authorization", "Bearer " + oauth.access_token }
+                   }
+            };
+
+            string activityName = NickName + ".UpdateBom+alpha";
+
+            // prepare & submit workitem
+            string callbackUrl = string.Format("{0}/api/forge/callback/designautomation/updatebom?id={1}&outputFileName={2}", OAuthController.GetAppSetting("FORGE_WEBHOOK_URL"), browerConnectionId, outputFileNameOSS);
+            WorkItem workItemSpec = new WorkItem()
+            {
+                ActivityId = activityName,
+                Arguments = new Dictionary<string, IArgument>()
+                {
+                    { "inputFile", inputFileArgument },
+                    { "inputParams",  inputParamsArgument },
+                    { "outputFile", outputFileArgument },
+                    { "onComplete", new XrefTreeArgument { Verb = Verb.Post, Url = callbackUrl } }
+                }
+            };
+            WorkItemStatus workItemStatus = await _designAutomation.CreateWorkItemsAsync(workItemSpec);
+
+            return Ok(new { WorkItemId = workItemStatus.Id });
         }
 
         /// <summary>
@@ -577,6 +768,62 @@ namespace forgeSample.Controllers
             // this folder is placed under the public folder, which may expose the bundles
             // but it was defined this way so it be published on most hosts easily
             return Directory.GetFiles(LocalBundlesFolder, "*.zip").Select(Path.GetFileNameWithoutExtension).ToArray();
+        }
+        private async Task<bool> UpdateViewable(string id, string outputFileName, dynamic body)
+        {
+            try
+            {
+                // your webhook should return immediately! we can use Hangfire to schedule a job
+                JObject bodyJson = JObject.Parse((string)body.ToString());
+                await _hubContext.Clients.Client(id).SendAsync("onComplete", bodyJson.ToString());
+
+                var client = new RestClient(bodyJson["reportUrl"].Value<string>());
+                var request = new RestRequest(string.Empty);
+
+                byte[] bs = client.DownloadData(request);
+                string report = System.Text.Encoding.Default.GetString(bs);
+                await _hubContext.Clients.Client(id).SendAsync("onComplete", report);
+
+                // Read parameters from json result file
+                ObjectsApi objectsApi = new ObjectsApi();
+                dynamic parameters = await objectsApi.GetObjectAsyncWithHttpInfo(NickName.ToLower() + "_designautomation", outputFileName);
+                string data;
+                using (StreamReader reader = new StreamReader(parameters.Data))
+                    data = reader.ReadToEnd();
+
+                await _hubContext.Clients.Client(id).SendAsync("onParameters", data);
+
+                // Get LMV viewable and host on web server
+
+
+                string zipPath = "wwwroot/viewable.zip";
+                using (System.IO.Stream viewable = objectsApi.GetObject(NickName.ToLower() + "_designautomation", "viewable.zip"))
+                using (FileStream zipFile = System.IO.File.Create(zipPath))
+                {
+                    viewable.CopyTo(zipFile);
+                }
+
+                string viewableDir = "wwwroot/viewables/viewable";
+                // Delete the old viewable if it exists (to optimize this cache by configuration)
+                if (Directory.Exists(viewableDir))
+                {
+                    Directory.Delete(viewableDir, true);
+                }
+
+                // Unzip the viewable
+                ZipFile.ExtractToDirectory(zipPath, viewableDir);
+
+                await _hubContext.Clients.Client(id).SendAsync("onViewableUpdate", "");
+
+                return true;
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error: " + e.Message);
+                return false;
+            }
+            return false;
         }
     }
 

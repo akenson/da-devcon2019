@@ -22,7 +22,12 @@ namespace forgeSample
                 routes.MapHub<Controllers.DesignAutomationHub>("/api/signalr/designautomation");
             });
 
-            app.UseFileServer();
+            // This is needed so that we can serve up SVF (Forge Viewer) files locally since we can directly
+            // output those from Design Automation
+            var fileServerOptions = new FileServerOptions();
+            fileServerOptions.StaticFileOptions.ServeUnknownFileTypes = true;
+            app.UseFileServer(fileServerOptions);
+
             app.UseMvc();
         }
     }
