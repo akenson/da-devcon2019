@@ -463,6 +463,8 @@ function launchViewer(url, container) {
         viewer = new Autodesk.Viewing.GuiViewer3D(htmlDiv);
         var startedCode = viewer.start();
         Autodesk.Viewing.Document.load(url, onDocumentLoadSuccess, onDocumentLoadFailure);
+
+
     });
 }
 
@@ -486,6 +488,8 @@ function onItemLoadSuccess(viewer, item) {
     console.log(item);
     // Congratulations! The viewer is now ready to be used.
     console.log('Viewers are equal: ' + (viewerApp === viewerApp.getCurrentViewer()));
+    viewer.autocam.cube.cubeRotateTo('front');
+    viewer.autocam.setCurrentViewAsTop();
 }
 /**
 * viewer.selectItem() failure callback.
