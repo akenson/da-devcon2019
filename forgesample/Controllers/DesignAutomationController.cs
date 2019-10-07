@@ -642,7 +642,7 @@ namespace forgeSample.Controllers
 
                 // Get LMV viewable and host on web server
                 string viewable = "result.pdf";
-                string filePath = "wwwroot/" + viewable;
+                string filePath = "wwwroot/viewables/" + viewable;
 
                 ObjectsApi objectsApi = new ObjectsApi();
                 using (System.IO.Stream viewableStream = objectsApi.GetObject(NickName.ToLower() + "_designautomation", viewable))
@@ -651,10 +651,13 @@ namespace forgeSample.Controllers
                     viewableStream.CopyTo(fileFile);
                 }
 
-                await _hubContext.Clients.Client(id).SendAsync("onDrawingUpdate", "");
+                await _hubContext.Clients.Client(id).SendAsync("onDrawing", "");
 
             }
-            catch (Exception e) { }
+            catch (Exception e) 
+            {
+                Console.WriteLine("Error: " + e.Message);
+            }
 
             // ALWAYS return ok (200)
             return Ok();

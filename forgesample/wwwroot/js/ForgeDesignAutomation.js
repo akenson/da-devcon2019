@@ -356,7 +356,7 @@ function updateViewable(message) {
 
     // Show the 3D Model Tab
     showTab('pills-3d-model');
-    $('#pills-tab a[href="#pills-3d-model-tab"]').tab('show')
+    $('#pills-tab a[href="#pills-3d-model-tab"]').tab('show');
 
     launchViewer("viewables/viewable/bubble.json", 'ModelDiv');
 
@@ -385,11 +385,11 @@ function updateDrawing(message) {
     writeLog(message);
 
     // Show the 3D Model Tab
-    showTab('pills-drawings');
-    $('#pills-tab a[href="#pills-drawing-tab"]').tab('show')
+    showTab('pills-drawing');
+    $('#pills-tab a[href="#pills-drawing-tab"]').tab('show');
 
     // Launch the viewer with the result viewable
-    launchViewer("viewables/result.pdf", 'DrawingDiv');
+    launch2dViewer("viewables/result.pdf");
 }
 
 function updateBom(message) {
@@ -515,7 +515,7 @@ function launch2dViewer(url) {
         var container = document.getElementById('DrawingDiv');
         var viewer2d = new Autodesk.Viewing.GuiViewer3D(container);
         viewer2d.start();
-        var pdf_file = 'http://localhost:3000/viewables/result.pdf';
+        var pdf_file = url;
         viewer2d.loadModel(pdf_file);
 
     });
