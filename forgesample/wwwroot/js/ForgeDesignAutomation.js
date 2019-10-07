@@ -35,15 +35,12 @@ $(document).ready(function () {
 
     startConnection();
 
-    // Uncomment to debug viewable
+    // Uncomment to debug
     //updateViewable('');
-
+    //updateDrawing('');
 });
 
 function prepareLists() {
-    //list('activity', '/api/forge/designautomation/activities');
-    //list('engines', '/api/forge/designautomation/engines');
-    //list('localBundles', '/api/appbundles');
     list('inputFile', '/api/forge/datamanagement/objects');
 }
 
@@ -141,8 +138,6 @@ function startExtractParams() {
             url: 'api/forge/designautomation/workitems/extractparams',
             data: data,
             contentType: 'application/json',
-            //processData: false,
-            //contentType: false,
             method: 'POST',
             success: function (res) {
                 writeLog('Workitem started: ' + res.workItemId);
@@ -195,11 +190,11 @@ function startUpdateBOM() {
     $('#bomTableBody').html('');
 
     startConnection(function () {
-        var file = $('#inputFile').val(); 
+        var file = 'result.zip';
         var projectPath = $('#projectPath').val();
         var documentPath = $('#documentPath').val();
         var updateData = {
-            'file': file,
+            'file': 'result.zip',
             'projectPath': projectPath,
             'documentPath': documentPath,
             browerConnectionId: connectionId
@@ -222,15 +217,18 @@ function startUpdateBOM() {
 
 function startUpdateDrawing() {
     clearLog();
+    //$('#bomTableBody').html('');
 
     startConnection(function () {
-        var file = $('#inputFile').val();
+        var file = 'result.zip';
         var projectPath = $('#projectPath').val();
         var documentPath = $('#documentPath').val();
         var updateData = {
             'file': file,
             'projectPath': projectPath,
             'documentPath': documentPath,
+            'drawingDocName': 'Skid Packing Layout',// Todo: expose this in the client on the drawing tab
+            'runRule': 'Create Proposal Drawing',// Todo: expose this in the client on the drawing tab
             browerConnectionId: connectionId
         };
 
@@ -360,12 +358,47 @@ function updateViewable(message) {
     showTab('pills-3d-model');
     $('#pills-tab a[href="#pills-3d-model-tab"]').tab('show')
 
+    launchViewer("viewables/viewable/bubble.json", 'ModelDiv');
+
+    // Add the signed url to the download tab
+    var signedData = {
+        'file': 'result.zip',
+        'browerConnectionId': connectionId
+    };
+
+    var signedDataStr = JSON.stringify(signedData);
+
+    $.ajax({
+        url: 'api/forge/signedurl',
+        data: signedDataStr,
+        contentType: 'application/json',
+        method: 'POST',
+        success: function (res) {
+            var downloadDiv = '#InventorDownloadDiv';
+            $(downloadDiv).html('');
+            updateDownloadElement(downloadDiv, res.signedurl, 'Inventor Assembly');
+        }
+    });
+}
+
+function updateDrawing(message) {
+    writeLog(message);
+
+    // Show the 3D Model Tab
+    showTab('pills-drawings');
+    $('#pills-tab a[href="#pills-drawing-tab"]').tab('show')
+
     // Launch the viewer with the result viewable
-    launchViewer("viewables/viewable/bubble.json");
+    launchViewer("viewables/result.pdf", 'DrawingDiv');
 }
 
 function updateBom(message) {
-    //$('#bomTableBody').html('');
+    writeLog(message);
+
+    // Show the BOM Tab
+    showTab('pills-bom');
+    $('#pills-tab a[href="#pills-bom-tab"]').tab('show');
+
     var tableBody = $('#bomTableBody');
     let json = JSON.parse(message);
     for (let key in json) {
@@ -387,15 +420,38 @@ function updateBom(message) {
     }
 
     console.log(tableBody);
+
+    // Add the signed url to the download tab
+    var signedData = {
+        'file': 'bomRows.json',
+        'browerConnectionId': connectionId
+    };
+
+    var signedDataStr = JSON.stringify(signedData);
+
+    $.ajax({
+        url: 'api/forge/signedurl',
+        data: signedDataStr,
+        contentType: 'application/json',
+        method: 'POST',
+        success: function (res) {
+            var downloadDiv = '#BomDownloadDiv';
+            $(downloadDiv).html('');
+            updateDownloadElement(downloadDiv, res.signedurl, 'BOM JSON');
+        }
+    });
 }
 
-function updateDrawing(message) {
-    $('#DrawingDiv').append('Drawing Updated!!');
+function updateDownloadElement(container, signedurl, label) {
+    var downloadBody = $(container);
+    var content = '<a href="' + signedurl + '" download>' + label + '</a></br/>';
+    downloadBody.append($(content));
 }
 
 var viewer;
 
-function launchViewer(url) {
+function launchViewer(url, container) {
+
     var options = {
         env: 'AutodeskProduction',
         api: 'derivativeV2',
@@ -403,7 +459,7 @@ function launchViewer(url) {
     };
 
     Autodesk.Viewing.Initializer(options, () => {
-        var htmlDiv = document.getElementById('ModelDiv');
+        var htmlDiv = document.getElementById(container);
         viewer = new Autodesk.Viewing.GuiViewer3D(htmlDiv);
         var startedCode = viewer.start();
         Autodesk.Viewing.Document.load(url, onDocumentLoadSuccess, onDocumentLoadFailure);
@@ -443,3 +499,24 @@ function onItemLoadFail(viewerErrorCode) {
 function showTab(tab) {
     $('.nav-tabs a[href="#' + tab + '"]').tab('show');
 };
+
+var viewer2d;
+
+function launch2dViewer(url) {
+    var options = {
+        env: 'AutodeskProduction',
+        api: 'derivativeV2', // TODO: for models uploaded to EMEA change this option to 'derivativeV2_EU'
+        getAccessToken: getForgeToken
+    };
+
+    // Run this when the page is loaded
+    Autodesk.Viewing.Initializer(options, function onInitialized() {
+        console.log('Initializer....');
+        var container = document.getElementById('DrawingDiv');
+        var viewer2d = new Autodesk.Viewing.GuiViewer3D(container);
+        viewer2d.start();
+        var pdf_file = 'http://localhost:3000/viewables/result.pdf';
+        viewer2d.loadModel(pdf_file);
+
+    });
+}

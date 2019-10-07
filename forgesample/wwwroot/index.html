@@ -131,6 +131,10 @@
                             <a class="nav-link" id="pills-drawing-tab" data-toggle="tab" href="#pills-drawing"
                                role="tab" aria-controls="pills-drawing" aria-selected="false">Drawing</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="pills-downloads-tab" data-toggle="tab" href="#pills-downloads"
+                               role="tab" aria-controls="pills-downloads" aria-selected="false">Downloads</a>
+                        </li>
                     </ul>
                     <div class="tab-content" id="pills-tablog">
                         <div class="tab-pane active in" id="pills-log" role="tabpanel" aria-labelledby="pills-log-tab">
@@ -169,22 +173,7 @@
                                                 <th scope="col">Material</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="bomTableBody">
-                                            <tr>
-                                                <th scope="row">1</th>
-                                                <td>Test Part Number</td>
-                                                <td>1</td>
-                                                <td>Just a placeholder Description</td>
-                                                <td>Lead</td>
-                                            </tr>
-                                        <th scope="row">2</th>
-                                        <td>Test Part Number 2</td>
-                                        <td>2</td>
-                                        <td>Just a placeholder Description 2</td>
-                                        <td>Copper</td>
-                                        </tr>
-                                        </tr>
-                                        </tbody>
+                                        <tbody id="bomTableBody"></tbody>
                                     </table>
                                 </div>
                             </div>
@@ -193,25 +182,24 @@
                             <div>
                                 <div>
                                     <br />
-                                    <button class="btn btn-primary" id="startUpdateDrawing">Update drawing</button></>
+                                    <button class="btn btn-primary" id="startUpdateDrawing">Update Drawing</button></>
                                     <hr />
                                 </div>
-                                <div id="DrawinglDiv">Drawing goes here!</div>
+                                <div id="DrawingDiv">Embedded 2D Drawing is a WIP, click: <a href="http://localhost:3000/DrawingTest.html">Drawing</a> to see drawing</div>
+                            </div>
+                        </div>
+                        <div class="tab-pane" id="pills-downloads" role="tabpanel" aria-labelledby="pills-downloads-tab">
+                            <div>
+                                <hr />
+                                <div id="InventorDownloadDiv"></div>
+                                <div id="DrawingDownloadDiv"></div>
+                                <div id="BomDownloadDiv"></div>
+                                <div id="PdfDownloadDiv"></div>
                             </div>
                         </div>
                     </div>
                     
                 </div>
-                <!--
-                    <div class="col-sm-8">
-                        <pre id="viewer" style="height: calc(100vh - 600px);;"></pre>
-                    </div>
-                    <hr />
-                    <div class="col-sm-8">
-                        <label>Log:</label>
-                        <pre id="outputlog" style="height: calc(100vh - 1200px);; overflow-y: scroll;"></pre>
-                    </div>
-                -->
 
             </div>
         </div>

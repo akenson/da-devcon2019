@@ -433,7 +433,6 @@ namespace forgeSample.Controllers
 
             return Ok(new { WorkItemId = workItemStatus.Id });
         }
-
         /// <summary>
         /// Start a new workitem
         /// </summary>
@@ -445,9 +444,11 @@ namespace forgeSample.Controllers
             string inputFileValue = workItemsSpecs["file"].Value<string>();
             string projectPathValue = workItemsSpecs["projectPath"].Value<string>();
             string documentPathValue = workItemsSpecs["documentPath"].Value<string>();
+            string documentRunRuleValue = workItemsSpecs["runRule"].Value<string>();
+            string documentDrawingDocValue = workItemsSpecs["drawingDocName"].Value<string>();
             string browerConnectionId = workItemsSpecs["browerConnectionId"].Value<string>();
 
-            string inputFileNameOSS = "result.zip";
+            string inputFileNameOSS = inputFileValue;
             string outputPdfFileNameOSS = "result.pdf";
             string outputDrawingFileNameOSS = "result.idw";
 
@@ -469,13 +470,13 @@ namespace forgeSample.Controllers
                  }
             };
             // 2. input params json 
-            JObject inputParams = JObject.FromObject(new { inputFile = documentPathValue, projectFile = projectPathValue });
+            JObject inputParams = JObject.FromObject(new { inputFile = documentPathValue, projectFile = projectPathValue, runRule = documentRunRuleValue, drawingDocName = documentDrawingDocValue });
 
             XrefTreeArgument inputParamsArgument = new XrefTreeArgument()
             {
                 Url = "data:application/json, " + ((JObject)inputParams).ToString(Formatting.None).Replace("\"", "'")
             };
-           
+
             // 3. output pdf file
             XrefTreeArgument outputDrawingFileArgument = new XrefTreeArgument()
             {
@@ -529,9 +530,50 @@ namespace forgeSample.Controllers
             try
             {
                 // your webhook should return immediately! we can use Hangfire to schedule a job
-                await UpdateViewable(id, outputFileName, body);
+                //await UpdateViewable(id, outputFileName, "onParameters", "viewable.zip" , body);
+
+                // your webhook should return immediately! we can use Hangfire to schedule a job
+                JObject bodyJson = JObject.Parse((string)body.ToString());
+                await _hubContext.Clients.Client(id).SendAsync("onComplete", bodyJson.ToString());
+
+                var client = new RestClient(bodyJson["reportUrl"].Value<string>());
+                var request = new RestRequest(string.Empty);
+
+                byte[] bs = client.DownloadData(request);
+                string report = System.Text.Encoding.Default.GetString(bs);
+                await _hubContext.Clients.Client(id).SendAsync("onComplete", report);
+
+                // Read parameters from json result file
+                ObjectsApi objectsApi = new ObjectsApi();
+                dynamic parameters = await objectsApi.GetObjectAsyncWithHttpInfo(NickName.ToLower() + "_designautomation", outputFileName);
+                string data;
+                using (StreamReader reader = new StreamReader(parameters.Data))
+                {
+                    data = reader.ReadToEnd();
+                }
+
+                await _hubContext.Clients.Client(id).SendAsync("onParameters", data);
+
+                // Get LMV viewable and host on web server
+                string viewable = "viewable.zip";
+                string filePath = "wwwroot/viewables/" + viewable;
+                using (System.IO.Stream viewableStream = objectsApi.GetObject(NickName.ToLower() + "_designautomation", viewable))
+                using (FileStream fileFile = System.IO.File.Create(filePath))
+                {
+                    viewableStream.CopyTo(fileFile);
+                }
+                string viewableDir = "wwwroot/viewables/viewable";
+                // Delete the old viewable if it exists (to optimize this cache by configuration)
+                if (Directory.Exists(viewableDir))
+                {
+                    Directory.Delete(viewableDir, true);
+                }
+
+                // Unzip the viewable
+                ZipFile.ExtractToDirectory(filePath, viewableDir);
+                await _hubContext.Clients.Client(id).SendAsync("onViewableUpdate", "");
             }
-            catch (Exception e) 
+            catch (Exception e)
             {
                 Console.WriteLine("Error: " + e.Message);
             }
@@ -549,6 +591,16 @@ namespace forgeSample.Controllers
         {
             try
             {
+                JObject bodyJson = JObject.Parse((string)body.ToString());
+                await _hubContext.Clients.Client(id).SendAsync("onComplete", bodyJson.ToString());
+
+                var client = new RestClient(bodyJson["reportUrl"].Value<string>());
+                var request = new RestRequest(string.Empty);
+
+                byte[] bs = client.DownloadData(request);
+                string report = System.Text.Encoding.Default.GetString(bs);
+                await _hubContext.Clients.Client(id).SendAsync("onComplete", report);
+
                 ObjectsApi objectsApi = new ObjectsApi();
                 dynamic parameters = await objectsApi.GetObjectAsyncWithHttpInfo(NickName.ToLower() + "_designautomation", outputFileName);
                 string data;
@@ -574,22 +626,35 @@ namespace forgeSample.Controllers
         [Route("/api/forge/callback/designautomation/updatedrawing")]
         public async Task<IActionResult> OnCallbackUpdateDrawing(string id, string outputFileName, [FromBody]dynamic body)
         {
-            // Story PDF Locally
-            //try
-            //{
-            //    ObjectsApi objectsApi = new ObjectsApi();
-            //    dynamic parameters = await objectsApi.GetObjectAsyncWithHttpInfo(NickName.ToLower() + "_designautomation", outputFileName);
-            //    string data;
-            //    using (StreamReader reader = new StreamReader(parameters.Data))
-            //        data = reader.ReadToEnd();
+            try
+            {
+                //await UpdateViewable(id, outputFileName, "onDrawing", "result.pdf", body);
+                // your webhook should return immediately! we can use Hangfire to schedule a job
+                JObject bodyJson = JObject.Parse((string)body.ToString());
+                await _hubContext.Clients.Client(id).SendAsync("onComplete", bodyJson.ToString());
 
-                await _hubContext.Clients.Client(id).SendAsync("onDrawing", null);
+                var client = new RestClient(bodyJson["reportUrl"].Value<string>());
+                var request = new RestRequest(string.Empty);
 
-            //}
-            //catch (Exception e)
-            //{
-            //    Console.WriteLine("Error: " + e.Message);
-            //}
+                byte[] bs = client.DownloadData(request);
+                string report = System.Text.Encoding.Default.GetString(bs);
+                await _hubContext.Clients.Client(id).SendAsync("onComplete", report);
+
+                // Get LMV viewable and host on web server
+                string viewable = "result.pdf";
+                string filePath = "wwwroot/" + viewable;
+
+                ObjectsApi objectsApi = new ObjectsApi();
+                using (System.IO.Stream viewableStream = objectsApi.GetObject(NickName.ToLower() + "_designautomation", viewable))
+                using (FileStream fileFile = System.IO.File.Create(filePath))
+                {
+                    viewableStream.CopyTo(fileFile);
+                }
+
+                await _hubContext.Clients.Client(id).SendAsync("onDrawingUpdate", "");
+
+            }
+            catch (Exception e) { }
 
             // ALWAYS return ok (200)
             return Ok();
@@ -602,25 +667,62 @@ namespace forgeSample.Controllers
         [Route("/api/forge/callback/designautomation/updatemodel")]
         public async Task<IActionResult> OnCallbackUpdateModel(string id, string outputFileName, [FromBody]dynamic body)
         {
+            //try
+            //{
+            //    await UpdateViewable(id, outputFileName, "onModelUpdate", "result.zip", body);
+            //}
+            //catch (Exception e) { }
             try
             {
                 // your webhook should return immediately! we can use Hangfire to schedule a job
-                await UpdateViewable(id, outputFileName, body);
-                //JObject bodyJson = JObject.Parse((string)body.ToString());
-                //await _hubContext.Clients.Client(id).SendAsync("onComplete", bodyJson.ToString());
+                JObject bodyJson = JObject.Parse((string)body.ToString());
+                await _hubContext.Clients.Client(id).SendAsync("onComplete", bodyJson.ToString());
 
-                //var client = new RestClient(bodyJson["reportUrl"].Value<string>());
-                //var request = new RestRequest(string.Empty);
+                var client = new RestClient(bodyJson["reportUrl"].Value<string>());
+                var request = new RestRequest(string.Empty);
 
-                //byte[] bs = client.DownloadData(request);
-                //string report = System.Text.Encoding.Default.GetString(bs);
-                //await _hubContext.Clients.Client(id).SendAsync("onComplete", report);
+                byte[] bs = client.DownloadData(request);
+                string report = System.Text.Encoding.Default.GetString(bs);
+                await _hubContext.Clients.Client(id).SendAsync("onComplete", report);
 
-                //ObjectsApi objectsApi = new ObjectsApi();
-                //dynamic signedUrl = await objectsApi.CreateSignedResourceAsyncWithHttpInfo(NickName.ToLower() + "_designautomation", outputFileName, new PostBucketsSigned(10), "read");
-                //await _hubContext.Clients.Client(id).SendAsync("downloadResult", (string)(signedUrl.Data.signedUrl));
+                //// Read parameters from json result file
+                //// Todo: only do this if we need to update the parameters
+                ObjectsApi objectsApi = new ObjectsApi();
+                //dynamic parameters = await objectsApi.GetObjectAsyncWithHttpInfo(NickName.ToLower() + "_designautomation", outputFileName);
+                //string data;
+                //using (StreamReader reader = new StreamReader(parameters.Data))
+                //{
+                //    data = reader.ReadToEnd();
+                //}
+
+                await _hubContext.Clients.Client(id).SendAsync("onModelUpdate", "");
+
+                // Get LMV viewable and host on web server
+                string viewable = "viewable.zip";
+                string filePath = "wwwroot/viewables/" + viewable;
+
+                using (System.IO.Stream viewableStream = objectsApi.GetObject(NickName.ToLower() + "_designautomation", viewable))
+                using (FileStream fileFile = System.IO.File.Create(filePath))
+                {
+                    viewableStream.CopyTo(fileFile);
+                }
+
+                string viewableDir = "wwwroot/viewables/viewable";
+                // Delete the old viewable if it exists (to optimize this cache by configuration)
+                if (Directory.Exists(viewableDir))
+                {
+                    Directory.Delete(viewableDir, true);
+                }
+
+                // Unzip the viewable
+                ZipFile.ExtractToDirectory(filePath, viewableDir);
+                await _hubContext.Clients.Client(id).SendAsync("onViewableUpdate", "");
+
             }
-            catch (Exception e) { }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error: " + e.Message);
+            }
 
             // ALWAYS return ok (200)
             return Ok();
@@ -639,7 +741,6 @@ namespace forgeSample.Controllers
             string documentPathValue = workItemsSpecs["documentPath"].Value<string>();
             string browerConnectionId = workItemsSpecs["browerConnectionId"].Value<string>();
 
-            // !AA! check to see if result file is actuall there
             string inputFileNameOSS = inputFileValue;
 
             string outputFileNameOSS = "bomRows.json";
@@ -662,7 +763,7 @@ namespace forgeSample.Controllers
                  }
             };
             // 2. input params json 
-            JObject inputParams = JObject.FromObject(new { inputFile = documentPathValue, projectFile = projectPathValue});
+            JObject inputParams = JObject.FromObject(new { inputFile = documentPathValue, projectFile = projectPathValue });
 
             XrefTreeArgument inputParamsArgument = new XrefTreeArgument()
             {
@@ -761,6 +862,43 @@ namespace forgeSample.Controllers
         /// <summary>
         /// Names of app bundles on this project
         /// </summary>
+        [HttpPost]
+        [Route("api/forge/signedurl")]
+        public async Task<IActionResult> GetSignedUrl([FromBody]JObject inputData)
+        {
+            string file = inputData["file"].Value<string>();
+            string signedUrlValue = "";
+            try
+            {
+                //string file = urlParams["file"].Value<string>();
+                //string file = "result.zip";
+                dynamic oauth = await OAuthController.GetInternalAsync();
+
+                // define Engines API
+                string bucketKey = NickName.ToLower() + "_designautomation";
+                ObjectsApi objects = new ObjectsApi();
+                objects.Configuration.AccessToken = oauth.access_token;
+
+                var postBucketsSigned = new PostBucketsSigned(30); // PostBucketsSigned | Body Structure
+
+                // this folder is placed under the public folder, which may expose the bundles
+                // but it was defined this way so it be published on most hosts easily
+                //dynamic response = await objects.CreateSignedResource(bucketKey, file, postBucketsSigned, "read");
+                var result = objects.CreateSignedResource(bucketKey, file, postBucketsSigned, "read");
+                signedUrlValue = result.signedUrl;
+
+            }
+            catch (Exception e) 
+            {
+                Console.WriteLine("Error: " + e.Message);
+            }
+            return Ok(new { signedurl = signedUrlValue }); // return list of objects in bucket
+
+        }
+
+        /// <summary>
+        /// Names of app bundles on this project
+        /// </summary>
         [HttpGet]
         [Route("api/appbundles")]
         public string[] GetLocalBundles()
@@ -768,62 +906,6 @@ namespace forgeSample.Controllers
             // this folder is placed under the public folder, which may expose the bundles
             // but it was defined this way so it be published on most hosts easily
             return Directory.GetFiles(LocalBundlesFolder, "*.zip").Select(Path.GetFileNameWithoutExtension).ToArray();
-        }
-        private async Task<bool> UpdateViewable(string id, string outputFileName, dynamic body)
-        {
-            try
-            {
-                // your webhook should return immediately! we can use Hangfire to schedule a job
-                JObject bodyJson = JObject.Parse((string)body.ToString());
-                await _hubContext.Clients.Client(id).SendAsync("onComplete", bodyJson.ToString());
-
-                var client = new RestClient(bodyJson["reportUrl"].Value<string>());
-                var request = new RestRequest(string.Empty);
-
-                byte[] bs = client.DownloadData(request);
-                string report = System.Text.Encoding.Default.GetString(bs);
-                await _hubContext.Clients.Client(id).SendAsync("onComplete", report);
-
-                // Read parameters from json result file
-                ObjectsApi objectsApi = new ObjectsApi();
-                dynamic parameters = await objectsApi.GetObjectAsyncWithHttpInfo(NickName.ToLower() + "_designautomation", outputFileName);
-                string data;
-                using (StreamReader reader = new StreamReader(parameters.Data))
-                    data = reader.ReadToEnd();
-
-                await _hubContext.Clients.Client(id).SendAsync("onParameters", data);
-
-                // Get LMV viewable and host on web server
-
-
-                string zipPath = "wwwroot/viewable.zip";
-                using (System.IO.Stream viewable = objectsApi.GetObject(NickName.ToLower() + "_designautomation", "viewable.zip"))
-                using (FileStream zipFile = System.IO.File.Create(zipPath))
-                {
-                    viewable.CopyTo(zipFile);
-                }
-
-                string viewableDir = "wwwroot/viewables/viewable";
-                // Delete the old viewable if it exists (to optimize this cache by configuration)
-                if (Directory.Exists(viewableDir))
-                {
-                    Directory.Delete(viewableDir, true);
-                }
-
-                // Unzip the viewable
-                ZipFile.ExtractToDirectory(zipPath, viewableDir);
-
-                await _hubContext.Clients.Client(id).SendAsync("onViewableUpdate", "");
-
-                return true;
-
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Error: " + e.Message);
-                return false;
-            }
-            return false;
         }
     }
 
