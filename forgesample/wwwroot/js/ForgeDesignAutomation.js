@@ -364,9 +364,13 @@ function startConnection(onReady) {
         updateBom(message);
     });
 
-    connection.on("onDrawing", function (message) {
-        updateDrawing(message);
-    });
+	connection.on("onDrawing", function (message) {
+		updateDrawing(message);
+	});
+
+	connection.on("onDownloadLinkComplete", function (message) {
+		addDownloadLink(message);
+	});
 }
 
 
@@ -383,33 +387,57 @@ function getForgeToken(callback) {
 }
 
 function updateViewable(message) {
-    writeLog(message);
+	writeLog(message);
 
-    // Show the 3D Model Tab
-    showTab('pills-3d-model');
-    $('#pills-tab a[href="#pills-3d-model-tab"]').tab('show');
+	// Show the 3D Model Tab
+	showTab('pills-3d-model');
+	$('#pills-tab a[href="#pills-3d-model-tab"]').tab('show');
 
-    launchViewer("viewables/viewable/bubble.json", 'ModelDiv');
+	launchViewer("viewables/viewable/bubble.json", 'ModelDiv');
 
-    // Add the signed url to the download tab
-    var signedData = {
-        'file': 'result.zip',
-        'browerConnectionId': connectionId
-    };
+	// Add the signed url to the download tab
+	var signedData = {
+		'file': 'result.zip',
+		'browerConnectionId': connectionId
+	};
 
-    var signedDataStr = JSON.stringify(signedData);
+	var signedDataStr = JSON.stringify(signedData);
 
-    $.ajax({
-        url: 'api/forge/signedurl',
-        data: signedDataStr,
-        contentType: 'application/json',
-        method: 'POST',
-        success: function (res) {
-            var downloadDiv = '#InventorDownloadDiv';
-            $(downloadDiv).html('');
-            updateDownloadElement(downloadDiv, res.signedurl, 'Inventor Assembly');
-        }
-    });
+	$.ajax({
+		url: 'api/forge/signedurl',
+		data: signedDataStr,
+		contentType: 'application/json',
+		method: 'POST',
+		success: function (res) {
+			var downloadDiv = '#InventorDownloadDiv';
+			$(downloadDiv).html('');
+			updateDownloadElement(downloadDiv, res.signedurl, 'Inventor Assembly');
+		}
+	});
+}
+
+function addDownloadLink(message) {
+	writeLog('Download link for: ' + message + ' ready');
+
+	// Add the signed url to the download tab
+	var signedData = {
+		'file': message,
+		'browerConnectionId': connectionId
+	};
+
+	var signedDataStr = JSON.stringify(signedData);
+
+	$.ajax({
+		url: 'api/forge/signedurl',
+		data: signedDataStr,
+		contentType: 'application/json',
+		method: 'POST',
+		success: function (res) {
+			var downloadDiv = '#InventorDownloadDiv';
+			// don't clear here: $(downloadDiv).html('');
+			updateDownloadElement(downloadDiv, res.signedurl, message);
+		}
+	});
 }
 
 function updateDrawing(message) {

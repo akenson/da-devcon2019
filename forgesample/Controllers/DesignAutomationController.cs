@@ -894,6 +894,15 @@ namespace forgeSample.Controllers
                 string report = System.Text.Encoding.Default.GetString(bs);
                 await _hubContext.Clients.Client(id).SendAsync("onProgress", report);
 
+                JToken jvalue;
+                if (!(bodyJson.TryGetValue("status", out jvalue) && jvalue.ToString().Equals("success")))
+                {
+                    // ALWAYS return ok (200)
+                    return Ok();
+                }
+
+                await _hubContext.Clients.Client(id).SendAsync("onDownloadLinkComplete", outputFileName);
+
                 // start Sat2Rfa Workitem
                 // basic input validation
                 // string documentPath = workItemsSpecs["documentPath"].Value<string>();
@@ -978,12 +987,8 @@ namespace forgeSample.Controllers
         [Route("/api/forge/callback/designautomation/revitrfaexport")]
         public async Task<IActionResult> OnCallbackRevitRfaExport(string id, string outputFileName, [FromBody]dynamic body)
         {
-            // TOOD: slightly modify to provide rfa download link
             try
             {
-                // your webhook should return immediately! we can use Hangfire to schedule a job
-                //await UpdateViewable(id, outputFileName, "onParameters", "viewable.zip" , body);
-
                 // your webhook should return immediately! we can use Hangfire to schedule a job
                 JObject bodyJson = JObject.Parse((string)body.ToString());
                 await _hubContext.Clients.Client(id).SendAsync("onComplete", bodyJson.ToString());
@@ -995,35 +1000,11 @@ namespace forgeSample.Controllers
                 string report = System.Text.Encoding.Default.GetString(bs);
                 await _hubContext.Clients.Client(id).SendAsync("onComplete", report);
 
-                // Read parameters from json result file
-                ObjectsApi objectsApi = new ObjectsApi();
-                dynamic parameters = await objectsApi.GetObjectAsyncWithHttpInfo(NickName.ToLower() + "_designautomation", outputFileName);
-                string data;
-                using (StreamReader reader = new StreamReader(parameters.Data))
+                JToken jvalue;
+                if(bodyJson.TryGetValue("status", out jvalue) && jvalue.ToString().Equals("success"))
                 {
-                    data = reader.ReadToEnd();
+                    await _hubContext.Clients.Client(id).SendAsync("onDownloadLinkComplete", outputFileName);
                 }
-
-                await _hubContext.Clients.Client(id).SendAsync("onParameters", data);
-
-                // Get LMV viewable and host on web server
-                string viewable = "viewable.zip";
-                string filePath = "wwwroot/viewables/" + viewable;
-                using (System.IO.Stream viewableStream = objectsApi.GetObject(NickName.ToLower() + "_designautomation", viewable))
-                using (FileStream fileFile = System.IO.File.Create(filePath))
-                {
-                    viewableStream.CopyTo(fileFile);
-                }
-                string viewableDir = "wwwroot/viewables/viewable";
-                // Delete the old viewable if it exists (to optimize this cache by configuration)
-                if (Directory.Exists(viewableDir))
-                {
-                    Directory.Delete(viewableDir, true);
-                }
-
-                // Unzip the viewable
-                ZipFile.ExtractToDirectory(filePath, viewableDir);
-                await _hubContext.Clients.Client(id).SendAsync("onViewableUpdate", "");
             }
             catch (Exception e)
             {
