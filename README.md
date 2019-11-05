@@ -26,6 +26,8 @@ This application uses the following AppBundles. You'll need to build and deploy 
 * https://github.com/akenson/da-update-user-params
 * https://github.com/akenson/da-update-bom
 * https://github.com/akenson/da-create-drawing
+* https://github.com/akenson/da-sat-output
+* https://github.com/akenson/da-rfa-output
 
 See the Readme.md in each of the repositories above for instructions
 
@@ -47,7 +49,10 @@ ngrok http 3000 -host-header="localhost:3000"
 |ASPNETCORE_ENVIRONMENT|Development|
 |FORGE_WEBHOOK_URL|_your ngrok url_|
 
-3. Upload a zip file containing your Inventor Assembly and Project file to a Forge OSS bucket that is in the form of `<your app id lower case>_designautomation`
+3. Upload data files
+* Upload a zip file containing your Inventor Assembly and Project file to a Forge OSS bucket that is in the form of `<your app id lower case>_designautomation`
+* Upload Revit Template file to Forge OSS bucked named <your app id lower case>_designautomation/object/RevitTemplate
+(generic model template is located in AppBundle "da-rfa-output/RevitTemplate/MetricGenericModel.rft")
 
 _insert Postman screenshot here??_
 _provide default data set??_

@@ -3,6 +3,12 @@
         <TargetFramework>netcoreapp2.1</TargetFramework>
     </PropertyGroup>
     <ItemGroup>
+      <Compile Remove="wwwroot\viewables\**" />
+      <Content Remove="wwwroot\viewables\**" />
+      <EmbeddedResource Remove="wwwroot\viewables\**" />
+      <None Remove="wwwroot\viewables\**" />
+    </ItemGroup>
+    <ItemGroup>
       <Content Remove="wwwroot\bundles\UpdateDWGParam.zip" />
       <Content Remove="wwwroot\bundles\UpdateIPTParam.zip" />
       <Content Remove="wwwroot\bundles\UpdateIPTParam1.zip" />
