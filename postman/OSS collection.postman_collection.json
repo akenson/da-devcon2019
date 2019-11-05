@@ -609,6 +609,42 @@
 				}
 			},
 			"response": []
+		},
+		{
+			"name": "Upload RevitTemplate to OSS",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{forge_token_oss}}"
+					}
+				],
+				"body": {
+					"mode": "file",
+					"file": {}
+				},
+				"url": {
+					"raw": "https://developer.api.autodesk.com/oss/v2/buckets/{{oss_bucket}}/objects/RevitTemplate",
+					"protocol": "https",
+					"host": [
+						"developer",
+						"api",
+						"autodesk",
+						"com"
+					],
+					"path": [
+						"oss",
+						"v2",
+						"buckets",
+						"{{oss_bucket}}",
+						"objects",
+						"RevitTemplate"
+					]
+				}
+			},
+			"response": []
 		}
+
 	]
 }
