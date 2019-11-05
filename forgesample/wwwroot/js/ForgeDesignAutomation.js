@@ -25,7 +25,8 @@ $(document).ready(function () {
     $('#startExtractParams').click(startExtractParams);
     $('#startUpdateModel').click(startUpdateModel);
     $('#startUpdateBOM').click(startUpdateBOM);
-    $('#startUpdateDrawing').click(startUpdateDrawing);
+	$('#startUpdateDrawing').click(startUpdateDrawing);
+	$('#startRfaDownload').click(startRfaDownload);
     $('#clearLog').click(clearLog);
 
     $('#pills-tab a').on('click', function (e) {
@@ -216,35 +217,61 @@ function startUpdateBOM() {
 }
 
 function startUpdateDrawing() {
-    clearLog();
-    //$('#bomTableBody').html('');
+	clearLog();
+	//$('#bomTableBody').html('');
 
-    startConnection(function () {
-        var file = 'result.zip';
-        var projectPath = $('#projectPath').val();
-        var documentPath = $('#documentPath').val();
-        var updateData = {
-            'file': file,
-            'projectPath': projectPath,
-            'documentPath': documentPath,
-            'drawingDocName': 'Skid Packing Layout',// Todo: expose this in the client on the drawing tab
-            'runRule': 'Create Proposal Drawing',// Todo: expose this in the client on the drawing tab
-            browerConnectionId: connectionId
-        };
+	startConnection(function () {
+		var file = 'result.zip';
+		var projectPath = $('#projectPath').val();
+		var documentPath = $('#documentPath').val();
+		var updateData = {
+			'file': file,
+			'projectPath': projectPath,
+			'documentPath': documentPath,
+			'drawingDocName': 'Skid Packing Layout',// Todo: expose this in the client on the drawing tab
+			'runRule': 'Create Proposal Drawing',// Todo: expose this in the client on the drawing tab
+			browerConnectionId: connectionId
+		};
 
-        var updateDataStr = JSON.stringify(updateData);
+		var updateDataStr = JSON.stringify(updateData);
 
-        writeLog('Updating model with new params...');
-        $.ajax({
-            url: 'api/forge/designautomation/workitems/updatedrawing',
-            data: updateDataStr,
-            contentType: 'application/json',
-            method: 'POST',
-            success: function (res) {
-                writeLog('Workitem started: ' + res.workItemId);
-            }
-        });
-    });
+		writeLog('Updating model with new params...');
+		$.ajax({
+			url: 'api/forge/designautomation/workitems/updatedrawing',
+			data: updateDataStr,
+			contentType: 'application/json',
+			method: 'POST',
+			success: function (res) {
+				writeLog('Workitem started: ' + res.workItemId);
+			}
+		});
+	});
+}
+
+function startRfaDownload() {
+	clearLog();
+	//$('#bomTableBody').html('');
+	writeLog('Rfa generation started.');
+
+
+	startConnection(function () {
+		var data = JSON.stringify({
+			documentPath: $('#documentPath').val(),
+			projectPath: $('#projectPath').val(),
+			inputFile: $('#inputFile').val(),
+			browerConnectionId: connectionId
+		});
+		writeLog('Starting i2sat workitem ...');
+		$.ajax({
+			url: 'api/forge/designautomation/workitems/getrfa',
+			data: data,
+			contentType: 'application/json',
+			method: 'POST',
+			success: function (res) {
+				writeLog('Workitem started: ' + res.workItemId);
+			}
+		});
+	});
 }
 
 function writeLog(text) {
@@ -317,9 +344,13 @@ function startConnection(onReady) {
         writeLog('<a href="' + url + '">Download result file here</a>');
     });
 
-    connection.on("onComplete", function (message) {
-        writeLog(message);
-    });
+	connection.on("onComplete", function (message) {
+		writeLog(message);
+	});
+
+	connection.on("onProgress", function (message) {
+		writeLog(message);
+	});
 
     connection.on("onParameters", function (message) {
         updateParameters(message);

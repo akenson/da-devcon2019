@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <assemblyIdentity name="InventorSatExportPlugin" version="1.0.0.0"></assemblyIdentity>
+  <clrClass clsid="{33f054db-ea34-4feb-96d2-d10e2cb17517}" progid="InventorSatExportPlugin.PluginServer" threadingModel="Both" name="InventorSatExportPlugin.PluginServer"></clrClass>
+  <file name="InventorSatExportPlugin.dll" hashalg="SHA1"></file>
+</assembly>

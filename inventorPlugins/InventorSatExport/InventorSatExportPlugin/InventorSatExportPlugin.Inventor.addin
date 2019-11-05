@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Addin Type="Plugin">
+  <ClassId>{33f054db-ea34-4feb-96d2-d10e2cb17517}</ClassId>
+  <ClientId>{33f054db-ea34-4feb-96d2-d10e2cb17517}</ClientId>
+  <DisplayName>InventorSatExportPlugin</DisplayName>
+  <Description>a InventorSatExportPlugin</Description>
+  <Assembly>InventorSatExportPlugin.dll</Assembly>
+</Addin>

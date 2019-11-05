@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ApplicationPackage>
+  <Components Description="Sat2Revit">
+    <RuntimeRequirements OS="Win64" 
+                         Platform="Revit" 
+                         SeriesMin="R2018" 
+                         SeriesMax="R2018" />
+    <ComponentEntry AppName="Sat2Revit" 
+                    Version="1.0.0" 
+                    ModuleName="./Contents/Sat2Revit.addin" 
+                    AppDescription="Sat2Revit" 
+                    LoadOnCommandInvocation="False" 
+                    LoadOnRevitStartup="True" />
+  </Components>
+</ApplicationPackage>
