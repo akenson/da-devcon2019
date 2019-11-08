@@ -57,7 +57,9 @@ ngrok http 3000 -host-header="localhost:3000"
 _insert Postman screenshot here??_
 _provide default data set??_
 
-4. In Visual Studio make sure the `forgesample` is the startup project and start debugging. This should launch a web browser with `localhost:3000`.
+4. Create a folder called viewables in da-devcon2019\forgesample\wwwroot for the design previews to work.
+
+5. In Visual Studio make sure the `forgesample` is the startup project and start debugging. This should launch a web browser with `localhost:3000`.
 
 
 
